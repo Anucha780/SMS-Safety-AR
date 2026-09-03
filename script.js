@@ -1,3 +1,5 @@
+import * as THREE from "three";
+
 import {
   MindARThree
 } from "mindar-image-three";
@@ -19,12 +21,110 @@ const mindarThree =
     imageTargetSrc:
       "./targets/targets.mind",
 
+    maxTrack: 1,
+
     uiLoading: "yes",
 
     uiScanning: "yes"
 
   });
 
+
+const {
+  renderer,
+  scene,
+  camera
+} = mindarThree;
+
+
+// ==============================
+// TARGET
+// ==============================
+
+const anchor =
+  mindarThree.addAnchor(0);
+
+
+// ==============================
+// TEST PLANE
+// ==============================
+
+const geometry =
+  new THREE.PlaneGeometry(
+    0.35,
+    0.35
+  );
+
+
+const material =
+  new THREE.MeshBasicMaterial({
+
+    color: 0x00ff00,
+
+    side: THREE.DoubleSide,
+
+    transparent: true,
+
+    opacity: 0.8
+
+  });
+
+
+const plane =
+  new THREE.Mesh(
+    geometry,
+    material
+  );
+
+
+plane.position.z =
+  0.01;
+
+
+anchor.group.add(
+  plane
+);
+
+
+// ==============================
+// FOUND
+// ==============================
+
+anchor.onTargetFound =
+  () => {
+
+    console.log(
+      "TARGET FOUND"
+    );
+
+
+    statusText.textContent =
+      "TARGET FOUND ✓";
+
+  };
+
+
+// ==============================
+// LOST
+// ==============================
+
+anchor.onTargetLost =
+  () => {
+
+    console.log(
+      "TARGET LOST"
+    );
+
+
+    statusText.textContent =
+      "Point camera at DINOCAP";
+
+  };
+
+
+// ==============================
+// START
+// ==============================
 
 async function start() {
 
@@ -34,28 +134,11 @@ async function start() {
       "Starting AR...";
 
 
-    console.log(
-      "Before MindAR start"
-    );
-
-
     await mindarThree.start();
 
 
-    console.log(
-      "MindAR started"
-    );
-
-
     statusText.textContent =
-      "AR STARTED ✓";
-
-
-    const {
-      renderer,
-      scene,
-      camera
-    } = mindarThree;
+      "Point camera at DINOCAP";
 
 
     renderer.setAnimationLoop(
@@ -71,7 +154,6 @@ async function start() {
 
   }
 
-
   catch (error) {
 
     console.error(
@@ -81,8 +163,7 @@ async function start() {
 
 
     statusText.textContent =
-      "AR ERROR: " +
-      error.message;
+      "AR ERROR";
 
   }
 
