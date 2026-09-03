@@ -21,22 +21,53 @@ const statusText =
 
 
 // ========================================
-// STATE
+// SETTINGS
 // ========================================
 
-let targetVisible =
-  false;
+// ความเร็ว animation
+// มาก = เร็ว
+// น้อย = ช้า
+const ANIMATION_SPEED =
+  0.008;
 
-let modelLoaded =
-  false;
+
+// จุดเริ่มต้น
+const START_SCALE =
+  0.35;
+
+
+// ขนาดตอนจบ
+const END_SCALE =
+  0.85;
+
+
+// ระยะ Z ตอนเริ่ม
+const START_Z =
+  0.05;
+
+
+// ระยะ Z ตอนจบ
+const END_Z =
+  0.30;
+
+
+// ========================================
+// STATE
+// ========================================
 
 let dinoModel =
   null;
 
-let turnProgress =
+let modelLoaded =
+  false;
+
+let targetVisible =
+  false;
+
+let animationProgress =
   0;
 
-let isTurning =
+let animationRunning =
   false;
 
 
@@ -80,14 +111,13 @@ const anchor =
 // LIGHT
 // ========================================
 
-const ambientLight =
+scene.add(
+
   new THREE.AmbientLight(
     0xffffff,
     2
-  );
+  )
 
-scene.add(
-  ambientLight
 );
 
 
@@ -97,11 +127,13 @@ const directionalLight =
     3
   );
 
+
 directionalLight.position.set(
   1,
   2,
   3
 );
+
 
 scene.add(
   directionalLight
@@ -110,19 +142,86 @@ scene.add(
 
 // ========================================
 // DINO ROOT
+//
+// เราจะ animate ตัวนี้
+// ไม่ไปหมุน GLB โดยตรง
 // ========================================
 
 const dinoRoot =
   new THREE.Group();
+
 
 anchor.group.add(
   dinoRoot
 );
 
 
-// ซ่อนก่อนจนกว่า target จะถูกพบ
 dinoRoot.visible =
   false;
+
+
+// ========================================
+// MODEL HOLDER
+//
+// ตัวนี้ใช้แก้ orientation ของ GLB อย่างเดียว
+// ========================================
+
+const modelHolder =
+  new THREE.Group();
+
+
+dinoRoot.add(
+  modelHolder
+);
+
+
+// ========================================
+// RESET ANIMATION
+// ========================================
+
+function resetDino() {
+
+  animationProgress =
+    0;
+
+
+  animationRunning =
+    true;
+
+
+  // ----------------------------
+  // เริ่มตรงกลาง DINOCAP
+  // ----------------------------
+
+  dinoRoot.position.set(
+    0,
+    0,
+    START_Z
+  );
+
+
+  // ----------------------------
+  // เริ่มตัวเล็ก
+  // ----------------------------
+
+  dinoRoot.scale.setScalar(
+    START_SCALE
+  );
+
+
+  // ----------------------------
+  // เริ่ม rotation
+  //
+  // จุดนี้คือการหันหน้า
+  // ----------------------------
+
+  dinoRoot.rotation.set(
+    0,
+    Math.PI / 2,
+    0
+  );
+
+}
 
 
 // ========================================
@@ -138,23 +237,14 @@ loader.load(
   "./models/dino.glb",
 
 
-  // ======================================
-  // SUCCESS
-  // ======================================
-
   (gltf) => {
-
-    console.log(
-      "DINO LOAD SUCCESS"
-    );
-
 
     const model =
       gltf.scene;
 
 
     // ====================================
-    // ORIGINAL SIZE
+    // NORMALIZE MODEL
     // ====================================
 
     const box =
@@ -164,6 +254,7 @@ loader.load(
 
     const size =
       new THREE.Vector3();
+
 
     box.getSize(
       size
@@ -178,16 +269,8 @@ loader.load(
       );
 
 
-    // ====================================
-    // NORMALIZE MODEL
-    // ====================================
-
-    const normalizedScale =
-      0.7 / maxDimension;
-
-
     model.scale.setScalar(
-      normalizedScale
+      0.7 / maxDimension
     );
 
 
@@ -195,7 +278,7 @@ loader.load(
     // CENTER MODEL
     // ====================================
 
-    const scaledBox =
+    const centeredBox =
       new THREE.Box3()
         .setFromObject(model);
 
@@ -203,7 +286,8 @@ loader.load(
     const center =
       new THREE.Vector3();
 
-    scaledBox.getCenter(
+
+    centeredBox.getCenter(
       center
     );
 
@@ -216,23 +300,22 @@ loader.load(
 
 
     // ====================================
-    // INITIAL ROTATION
+    // IMPORTANT
     //
-    // เริ่มจากหันหน้าหากล้อง
+    // GLB ของเราเดิมหันข้าง
+    // ปล่อย model rotation = 0
+    //
+    // การหมุนทั้งหมดไปทำที่ dinoRoot
     // ====================================
 
     model.rotation.set(
       0,
-      Math.PI / 2,
+      0,
       0
     );
 
 
-    // ====================================
-    // ADD MODEL
-    // ====================================
-
-    dinoRoot.add(
+    modelHolder.add(
       model
     );
 
@@ -245,26 +328,11 @@ loader.load(
       true;
 
 
-    // ====================================
-    // ROOT POSITION
-    //
-    // เริ่มจากกลาง DINOCAP
-    // ====================================
-
-    dinoRoot.position.set(
-      0,
-      0,
-      0.15
+    console.log(
+      "DINO READY"
     );
 
 
-    dinoRoot.scale.setScalar(
-      0.75
-    );
-
-
-    // ถ้า target ถูกเจอไปแล้ว
-    // ให้ Dino แสดงทันที
     if (
       targetVisible
     ) {
@@ -273,44 +341,26 @@ loader.load(
         true;
 
 
-      turnProgress =
-        0;
-
-
-      isTurning =
-        true;
-
-
-      statusText.textContent =
-        "DINOCAP FOUND ✓";
+      resetDino();
 
     }
 
-    else {
 
-      statusText.textContent =
-        "DINO READY ✓";
-
-    }
+    statusText.textContent =
+      targetVisible
+        ? "DINOCAP FOUND ✓"
+        : "DINO READY ✓";
 
   },
 
 
-  // ======================================
-  // PROGRESS
-  // ======================================
-
   undefined,
 
-
-  // ======================================
-  // ERROR
-  // ======================================
 
   (error) => {
 
     console.error(
-      "DINO LOAD ERROR:",
+      "DINO ERROR:",
       error
     );
 
@@ -330,59 +380,23 @@ loader.load(
 anchor.onTargetFound =
   () => {
 
-    console.log(
-      "DINOCAP FOUND"
-    );
-
-
     targetVisible =
       true;
 
 
+    statusText.textContent =
+      "DINOCAP FOUND ✓";
+
+
     if (
-      modelLoaded &&
-      dinoModel
+      modelLoaded
     ) {
 
-      // แสดง Dino
       dinoRoot.visible =
         true;
 
 
-      // กลับมาเริ่มที่ตรงกลาง
-      dinoRoot.position.set(
-        0,
-        0,
-        0.15
-      );
-
-
-      // เริ่มจากหันหน้าหากล้อง
-      dinoModel.rotation.set(
-        0,
-        Math.PI / 2,
-        0
-      );
-
-
-      // เริ่ม animation ใหม่
-      turnProgress =
-        0;
-
-
-      isTurning =
-        true;
-
-
-      statusText.textContent =
-        "DINOCAP FOUND ✓";
-
-    }
-
-    else {
-
-      statusText.textContent =
-        "DINOCAP FOUND / DINO LOADING...";
+      resetDino();
 
     }
 
@@ -396,11 +410,6 @@ anchor.onTargetFound =
 anchor.onTargetLost =
   () => {
 
-    console.log(
-      "DINOCAP LOST"
-    );
-
-
     targetVisible =
       false;
 
@@ -409,7 +418,7 @@ anchor.onTargetLost =
       false;
 
 
-    isTurning =
+    animationRunning =
       false;
 
 
@@ -420,7 +429,7 @@ anchor.onTargetLost =
 
 
 // ========================================
-// START AR
+// START
 // ========================================
 
 async function start() {
@@ -441,70 +450,105 @@ async function start() {
 
 
     // ====================================
-    // ANIMATION LOOP
+    // LOOP
     // ====================================
 
     renderer.setAnimationLoop(
+
       () => {
 
 
         // =================================
-        // DINO TURN
+        // DINO ANIMATION
         // =================================
 
         if (
           targetVisible &&
-          dinoModel &&
-          isTurning
+          modelLoaded &&
+          animationRunning
         ) {
 
-          // ความเร็วการหมุน
-          turnProgress +=
-            0.01;
+          animationProgress +=
+            ANIMATION_SPEED;
 
 
-          turnProgress =
+          animationProgress =
             THREE.MathUtils.clamp(
-              turnProgress,
+              animationProgress,
               0,
               1
             );
 
 
-          // Smoothstep
-          const smooth =
-            turnProgress *
-            turnProgress *
+          // smoothstep
+          const t =
+            animationProgress *
+            animationProgress *
             (
               3 -
-              2 * turnProgress
+              2 *
+              animationProgress
             );
 
 
-          // เริ่มจากหันหน้าหากล้อง
-          // แล้วค่อย ๆ หมุนเป็นด้านข้าง
-          dinoModel.rotation.y =
+          // ===============================
+          // ROTATE
+          //
+          // 90° → 0°
+          // ===============================
+
+          dinoRoot.rotation.y =
             THREE.MathUtils.lerp(
               Math.PI / 2,
               0,
-              smooth
+              t
             );
 
 
-          // =================================
-          // จบ animation
-          // =================================
+          // ===============================
+          // POP OUT
+          // ===============================
+
+          dinoRoot.position.z =
+            THREE.MathUtils.lerp(
+              START_Z,
+              END_Z,
+              t
+            );
+
+
+          // ===============================
+          // GROW
+          // ===============================
+
+          const scale =
+            THREE.MathUtils.lerp(
+              START_SCALE,
+              END_SCALE,
+              t
+            );
+
+
+          dinoRoot.scale.setScalar(
+            scale
+          );
+
+
+          // ===============================
+          // FINISHED
+          // ===============================
 
           if (
-            turnProgress >= 1
+            animationProgress >= 1
           ) {
 
-            isTurning =
+            animationRunning =
               false;
 
 
-            dinoModel.rotation.y =
-              0;
+            console.log(
+              "DINO ANIMATION FINISHED"
+            );
 
           }
 
@@ -517,6 +561,7 @@ async function start() {
         );
 
       }
+
     );
 
   }
