@@ -16,7 +16,7 @@ const statusText =
 
 const mindarThree =
   new MindARThree({
-    container: container,
+    container,
     imageTargetSrc: "./targets/targets.mind",
     maxTrack: 1,
     uiLoading: "yes",
@@ -33,21 +33,21 @@ const anchor =
   mindarThree.addAnchor(0);
 
 
-// ========================================
+// ======================================
 // LIGHT
-// ========================================
+// ======================================
 
 scene.add(
   new THREE.AmbientLight(
     0xffffff,
-    3
+    4
   )
 );
 
 const light =
   new THREE.DirectionalLight(
     0xffffff,
-    3
+    4
   );
 
 light.position.set(
@@ -56,46 +56,65 @@ light.position.set(
   3
 );
 
-scene.add(
-  light
+scene.add(light);
+
+
+// ======================================
+// DEBUG GREEN BOX
+// ======================================
+
+const debugBox =
+  new THREE.Mesh(
+
+    new THREE.BoxGeometry(
+      0.25,
+      0.25,
+      0.25
+    ),
+
+    new THREE.MeshBasicMaterial({
+      color: 0x00ff00
+    })
+
+  );
+
+debugBox.position.set(
+  0,
+  0,
+  0.15
+);
+
+anchor.group.add(
+  debugBox
 );
 
 
-// ========================================
-// ROOT
-// ========================================
+// ======================================
+// BUTTERFLY HOLDER
+// ======================================
 
-const butterflyRoot =
+const butterflyHolder =
   new THREE.Group();
 
 anchor.group.add(
-  butterflyRoot
+  butterflyHolder
 );
 
-butterflyRoot.visible =
-  false;
+butterflyHolder.position.set(
+  0.35,
+  0,
+  0.2
+);
 
 
-// ========================================
-// STATE
-// ========================================
-
-let butterfly =
-  null;
-
-let modelLoaded =
-  false;
-
-let targetVisible =
-  false;
-
-
-// ========================================
-// LOAD MODEL
-// ========================================
+// ======================================
+// LOAD BUTTERFLY
+// ======================================
 
 const loader =
   new GLTFLoader();
+
+let butterfly = null;
 
 loader.load(
 
@@ -104,7 +123,7 @@ loader.load(
   (gltf) => {
 
     console.log(
-      "BUTTERFLY LOAD SUCCESS",
+      "BUTTERFLY LOADED",
       gltf
     );
 
@@ -112,9 +131,9 @@ loader.load(
       gltf.scene;
 
 
-    // ====================================
-    // NORMALIZE SIZE
-    // ====================================
+    // ==================================
+    // CHECK ORIGINAL SIZE
+    // ==================================
 
     const box =
       new THREE.Box3()
@@ -125,38 +144,42 @@ loader.load(
     const size =
       new THREE.Vector3();
 
-    box.getSize(
-      size
-    );
+    box.getSize(size);
 
     console.log(
-      "BUTTERFLY SIZE:",
+      "ORIGINAL SIZE",
       size
     );
 
-    const maxDimension =
+
+    // ==================================
+    // FORCE SIZE
+    // ==================================
+
+    const largest =
       Math.max(
         size.x,
         size.y,
         size.z
       );
 
-
     if (
-      maxDimension > 0
+      largest > 0
     ) {
 
+      const scale =
+        0.5 / largest;
+
       butterfly.scale.setScalar(
-        0.45 /
-        maxDimension
+        scale
       );
 
     }
 
 
-    // ====================================
-    // CENTER MODEL
-    // ====================================
+    // ==================================
+    // RECALCULATE CENTER
+    // ==================================
 
     const newBox =
       new THREE.Box3()
@@ -178,49 +201,45 @@ loader.load(
     );
 
 
-    // ====================================
-    // ADD MODEL
-    // ====================================
+    // ==================================
+    // FORCE MATERIAL VISIBLE
+    // ==================================
 
-    butterflyRoot.add(
+    butterfly.traverse(
+      (child) => {
+
+        if (
+          child.isMesh
+        ) {
+
+          console.log(
+            "MESH FOUND",
+            child.name
+          );
+
+          child.material =
+            new THREE.MeshBasicMaterial({
+              color: 0xff00ff,
+              side: THREE.DoubleSide
+            });
+
+        }
+
+      }
+    );
+
+
+    // ==================================
+    // ADD
+    // ==================================
+
+    butterflyHolder.add(
       butterfly
     );
 
 
-    // ====================================
-    // POSITION
-    // ====================================
-
-    butterflyRoot.position.set(
-      0,
-      0,
-      0.25
-    );
-
-    butterflyRoot.rotation.set(
-      0,
-      0,
-      0
-    );
-
-    modelLoaded =
-      true;
-
-
-    if (
-      targetVisible
-    ) {
-
-      butterflyRoot.visible =
-        true;
-
-    }
-
-
     statusText.textContent =
-      targetVisible
-        ? "BUTTERFLY FOUND ✓"
-        : "BUTTERFLY READY ✓";
+      "BUTTERFLY LOADED ✓";
 
   },
 
@@ -229,50 +248,33 @@ loader.load(
   (error) => {
 
     console.error(
-      "BUTTERFLY LOAD ERROR:",
+      "BUTTERFLY ERROR",
       error
     );
 
     statusText.textContent =
-      "BUTTERFLY LOAD ERROR";
+      "BUTTERFLY ERROR";
 
   }
 
 );
 
 
-// ========================================
-// TARGET
-// ========================================
+// ======================================
+// TARGET FOUND
+// ======================================
 
 anchor.onTargetFound =
   () => {
 
     console.log(
-      "DINOCAP FOUND"
+      "TARGET FOUND"
     );
 
-    targetVisible =
-      true;
-
-    if (
-      modelLoaded
-    ) {
-
-      butterflyRoot.visible =
-        true;
-
-      statusText.textContent =
-        "BUTTERFLY FOUND ✓";
-
-    }
-
-    else {
-
-      statusText.textContent =
-        "TARGET FOUND / MODEL LOADING...";
-
-    }
+    statusText.textContent =
+      butterfly
+        ? "TARGET + BUTTERFLY ✓"
+        : "TARGET FOUND / LOADING MODEL";
 
   };
 
@@ -280,11 +282,9 @@ anchor.onTargetFound =
 anchor.onTargetLost =
   () => {
 
-    targetVisible =
-      false;
-
-    butterflyRoot.visible =
-      false;
+    console.log(
+      "TARGET LOST"
+    );
 
     statusText.textContent =
       "Point camera at DINOCAP";
@@ -292,9 +292,13 @@ anchor.onTargetLost =
   };
 
 
-// ========================================
-// START
-// ========================================
+// ======================================
+// ANIMATION
+// ======================================
+
+const clock =
+  new THREE.Clock();
+
 
 async function start() {
 
@@ -306,24 +310,62 @@ async function start() {
     await mindarThree.start();
 
     statusText.textContent =
-      modelLoaded
-        ? "Point camera at DINOCAP"
-        : "Loading Butterfly...";
+      "Point camera at DINOCAP";
 
 
     renderer.setAnimationLoop(
       () => {
 
+        const time =
+          clock.getElapsedTime();
+
+
+        // ------------------------------
+        // DEBUG BOX ROTATION
+        // ------------------------------
+
+        debugBox.rotation.x =
+          time;
+
+        debugBox.rotation.y =
+          time;
+
+
+        // ------------------------------
+        // BUTTERFLY
+        // ------------------------------
+
         if (
-          targetVisible &&
-          modelLoaded
+          butterfly
         ) {
 
-          // หมุนช้า ๆ เพื่อให้เห็นชัดว่า model มีอยู่
-          butterflyRoot.rotation.y +=
-            0.01;
+          // บินเป็นวง
+          butterflyHolder.position.x =
+            Math.cos(time) *
+            0.45;
+
+          butterflyHolder.position.y =
+            Math.sin(time) *
+            0.30;
+
+          butterflyHolder.position.z =
+            0.25 +
+            Math.sin(
+              time * 2
+            ) *
+            0.1;
+
+
+          // หมุนให้เห็นว่ามันเคลื่อน
+          butterflyHolder.rotation.y =
+            time;
+
+          butterflyHolder.rotation.z =
+            Math.sin(time) *
+            0.3;
 
         }
+
 
         renderer.render(
           scene,
@@ -337,10 +379,7 @@ async function start() {
 
   catch (error) {
 
-    console.error(
-      "AR ERROR:",
-      error
-    );
+    console.error(error);
 
     statusText.textContent =
       "AR ERROR";
@@ -348,5 +387,6 @@ async function start() {
   }
 
 }
+
 
 start();
