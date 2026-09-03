@@ -89,6 +89,11 @@ anchor.group.add(
   dinoRoot
 );
 
+dinoRoot.position.set(
+  0,
+  -0.15,
+  0.02
+);
 
 let dinoModel = null;
 
@@ -103,12 +108,12 @@ let revealProgress = 0;
 
 // Dino เริ่มเล็กแค่ไหน
 const START_SCALE =
-  0.35;
+  0.18;
 
 
 // Dino ใหญ่สุดแค่ไหน
 const MAX_SCALE =
-  1.8;
+  2.6;
 
 
 // ระยะกล้องใกล้
@@ -128,7 +133,7 @@ const REVEAL_SPEED =
 
 // ระยะที่ Dino ดันออกจากภาพ
 const POP_OUT_DISTANCE =
-  0.35;
+  0.65;
 
 
 // ========================================
@@ -211,7 +216,7 @@ loader.load(
     // ------------------------------------
 
     model.rotation.set(
-      0,
+      Math.PI / 2,
       0,
       0
     );
