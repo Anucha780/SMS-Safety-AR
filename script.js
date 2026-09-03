@@ -8,49 +8,26 @@ import {
   MindARThree
 } from "mindar-image-three";
 
-
-// ========================================
-// HTML
-// ========================================
-
 const container =
   document.getElementById("container");
 
 const statusText =
   document.getElementById("status");
 
-
-// ========================================
-// MINDAR
-// ========================================
-
 const mindarThree =
   new MindARThree({
-
     container: container,
-
-    imageTargetSrc:
-      "./targets/targets.mind",
-
+    imageTargetSrc: "./targets/targets.mind",
     maxTrack: 1,
-
     uiLoading: "yes",
-
     uiScanning: "yes"
-
   });
-
 
 const {
   renderer,
   scene,
   camera
 } = mindarThree;
-
-
-// ========================================
-// TARGET
-// ========================================
 
 const anchor =
   mindarThree.addAnchor(0);
@@ -60,48 +37,42 @@ const anchor =
 // LIGHT
 // ========================================
 
-const ambientLight =
+scene.add(
   new THREE.AmbientLight(
     0xffffff,
-    2.5
-  );
-
-scene.add(
-  ambientLight
+    3
+  )
 );
 
-
-const directionalLight =
+const light =
   new THREE.DirectionalLight(
     0xffffff,
     3
   );
 
-directionalLight.position.set(
+light.position.set(
   1,
   2,
   3
 );
 
 scene.add(
-  directionalLight
+  light
 );
 
 
 // ========================================
-// BUTTERFLY GROUP
+// ROOT
 // ========================================
 
-const butterflyGroup =
+const butterflyRoot =
   new THREE.Group();
 
 anchor.group.add(
-  butterflyGroup
+  butterflyRoot
 );
 
-
-// ซ่อนจนกว่าจะเจอ DINOCAP
-butterflyGroup.visible =
+butterflyRoot.visible =
   false;
 
 
@@ -109,7 +80,8 @@ butterflyGroup.visible =
 // STATE
 // ========================================
 
-const butterflies = [];
+let butterfly =
+  null;
 
 let modelLoaded =
   false;
@@ -119,270 +91,117 @@ let targetVisible =
 
 
 // ========================================
-// BUTTERFLY SETTINGS
-// ========================================
-
-const butterflySettings = [
-
-  {
-    color: "#ff3b30",
-    radiusX: 0.45,
-    radiusY: 0.25,
-    speed: 1.3,
-    offset: 0,
-    height: 0.05,
-    scale: 0.18
-  },
-
-  {
-    color: "#007aff",
-    radiusX: 0.60,
-    radiusY: 0.32,
-    speed: 1.0,
-    offset: Math.PI * 0.7,
-    height: 0.15,
-    scale: 0.16
-  },
-
-  {
-    color: "#ffd60a",
-    radiusX: 0.52,
-    radiusY: 0.38,
-    speed: 1.5,
-    offset: Math.PI * 1.4,
-    height: 0.25,
-    scale: 0.14
-  }
-
-];
-
-
-// ========================================
-// RECOLOR MODEL
-// ========================================
-
-function recolorModel(
-  model,
-  color
-) {
-
-  model.traverse(
-    (child) => {
-
-      if (
-        child.isMesh
-      ) {
-
-        // clone material
-        // เพื่อไม่ให้แต่ละตัวใช้ material เดียวกัน
-        child.material =
-          child.material.clone();
-
-
-        // ย้อมสี
-        child.material.color.set(
-          color
-        );
-
-      }
-
-    }
-  );
-
-}
-
-
-// ========================================
-// NORMALIZE MODEL
-// ========================================
-
-function normalizeModel(
-  model
-) {
-
-  const box =
-    new THREE.Box3()
-      .setFromObject(model);
-
-
-  const size =
-    new THREE.Vector3();
-
-
-  box.getSize(
-    size
-  );
-
-
-  const maxDimension =
-    Math.max(
-      size.x,
-      size.y,
-      size.z
-    );
-
-
-  if (
-    maxDimension > 0
-  ) {
-
-    model.scale.setScalar(
-      1 / maxDimension
-    );
-
-  }
-
-
-  // --------------------------------------
-  // CENTER MODEL
-  // --------------------------------------
-
-  const centeredBox =
-    new THREE.Box3()
-      .setFromObject(model);
-
-
-  const center =
-    new THREE.Vector3();
-
-
-  centeredBox.getCenter(
-    center
-  );
-
-
-  model.position.set(
-    -center.x,
-    -center.y,
-    -center.z
-  );
-
-}
-
-
-// ========================================
-// CREATE BUTTERFLY
-// ========================================
-
-function createButterfly(
-  originalModel,
-  settings
-) {
-
-  // Clone model
-  const model =
-    originalModel.clone(true);
-
-
-  // ======================================
-  // HOLDER
-  //
-  // holder เป็นตัวที่บิน
-  // model อยู่ข้างใน
-  // ======================================
-
-  const holder =
-    new THREE.Group();
-
-
-  holder.add(
-    model
-  );
-
-
-  // ======================================
-  // COLOR
-  // ======================================
-
-  recolorModel(
-    model,
-    settings.color
-  );
-
-
-  // ======================================
-  // SIZE
-  // ======================================
-
-  holder.scale.setScalar(
-    settings.scale
-  );
-
-
-  // ======================================
-  // ADD
-  // ======================================
-
-  butterflyGroup.add(
-    holder
-  );
-
-
-  butterflies.push({
-
-    holder: holder,
-
-    model: model,
-
-    settings: settings
-
-  });
-
-}
-
-
-// ========================================
-// LOAD BUTTERFLY
+// LOAD MODEL
 // ========================================
 
 const loader =
   new GLTFLoader();
 
-
 loader.load(
 
   "./models/butterfly.glb",
 
-
-  // ======================================
-  // SUCCESS
-  // ======================================
-
   (gltf) => {
 
     console.log(
-      "BUTTERFLY LOAD SUCCESS"
+      "BUTTERFLY LOAD SUCCESS",
+      gltf
     );
 
-
-    const originalModel =
+    butterfly =
       gltf.scene;
 
 
     // ====================================
-    // NORMALIZE
+    // NORMALIZE SIZE
     // ====================================
 
-    normalizeModel(
-      originalModel
-    );
-
-
-    // ====================================
-    // CREATE 3 BUTTERFLIES
-    // ====================================
-
-    butterflySettings.forEach(
-      (settings) => {
-
-        createButterfly(
-          originalModel,
-          settings
+    const box =
+      new THREE.Box3()
+        .setFromObject(
+          butterfly
         );
 
-      }
+    const size =
+      new THREE.Vector3();
+
+    box.getSize(
+      size
     );
 
+    console.log(
+      "BUTTERFLY SIZE:",
+      size
+    );
+
+    const maxDimension =
+      Math.max(
+        size.x,
+        size.y,
+        size.z
+      );
+
+
+    if (
+      maxDimension > 0
+    ) {
+
+      butterfly.scale.setScalar(
+        0.45 /
+        maxDimension
+      );
+
+    }
+
+
+    // ====================================
+    // CENTER MODEL
+    // ====================================
+
+    const newBox =
+      new THREE.Box3()
+        .setFromObject(
+          butterfly
+        );
+
+    const center =
+      new THREE.Vector3();
+
+    newBox.getCenter(
+      center
+    );
+
+    butterfly.position.set(
+      -center.x,
+      -center.y,
+      -center.z
+    );
+
+
+    // ====================================
+    // ADD MODEL
+    // ====================================
+
+    butterflyRoot.add(
+      butterfly
+    );
+
+
+    // ====================================
+    // POSITION
+    // ====================================
+
+    butterflyRoot.position.set(
+      0,
+      0,
+      0.25
+    );
+
+    butterflyRoot.rotation.set(
+      0,
+      0,
+      0
+    );
 
     modelLoaded =
       true;
@@ -392,7 +211,7 @@ loader.load(
       targetVisible
     ) {
 
-      butterflyGroup.visible =
+      butterflyRoot.visible =
         true;
 
     }
@@ -400,18 +219,12 @@ loader.load(
 
     statusText.textContent =
       targetVisible
-        ? "BUTTERFLIES FLYING ✓"
-        : "BUTTERFLIES READY ✓";
+        ? "BUTTERFLY FOUND ✓"
+        : "BUTTERFLY READY ✓";
 
   },
 
-
   undefined,
-
-
-  // ======================================
-  // ERROR
-  // ======================================
 
   (error) => {
 
@@ -419,7 +232,6 @@ loader.load(
       "BUTTERFLY LOAD ERROR:",
       error
     );
-
 
     statusText.textContent =
       "BUTTERFLY LOAD ERROR";
@@ -430,7 +242,7 @@ loader.load(
 
 
 // ========================================
-// TARGET FOUND
+// TARGET
 // ========================================
 
 anchor.onTargetFound =
@@ -440,53 +252,39 @@ anchor.onTargetFound =
       "DINOCAP FOUND"
     );
 
-
     targetVisible =
       true;
-
 
     if (
       modelLoaded
     ) {
 
-      butterflyGroup.visible =
+      butterflyRoot.visible =
         true;
 
-
       statusText.textContent =
-        "BUTTERFLIES FLYING ✓";
+        "BUTTERFLY FOUND ✓";
 
     }
 
     else {
 
       statusText.textContent =
-        "DINOCAP FOUND / LOADING...";
+        "TARGET FOUND / MODEL LOADING...";
 
     }
 
   };
 
 
-// ========================================
-// TARGET LOST
-// ========================================
-
 anchor.onTargetLost =
   () => {
-
-    console.log(
-      "DINOCAP LOST"
-    );
-
 
     targetVisible =
       false;
 
-
-    butterflyGroup.visible =
+    butterflyRoot.visible =
       false;
-
 
     statusText.textContent =
       "Point camera at DINOCAP";
@@ -495,15 +293,7 @@ anchor.onTargetLost =
 
 
 // ========================================
-// CLOCK
-// ========================================
-
-const clock =
-  new THREE.Clock();
-
-
-// ========================================
-// START AR
+// START
 // ========================================
 
 async function start() {
@@ -513,157 +303,27 @@ async function start() {
     statusText.textContent =
       "Starting AR...";
 
-
     await mindarThree.start();
-
 
     statusText.textContent =
       modelLoaded
         ? "Point camera at DINOCAP"
-        : "Loading Butterflies...";
+        : "Loading Butterfly...";
 
-
-    // ====================================
-    // ANIMATION LOOP
-    // ====================================
 
     renderer.setAnimationLoop(
       () => {
-
-
-        const time =
-          clock.getElapsedTime();
-
-
-        // =================================
-        // ANIMATE BUTTERFLIES
-        // =================================
 
         if (
           targetVisible &&
           modelLoaded
         ) {
 
-          butterflies.forEach(
-            (butterfly) => {
-
-
-              const {
-                holder,
-                settings
-              } = butterfly;
-
-
-              // ===========================
-              // ANGLE
-              // ===========================
-
-              const angle =
-                (
-                  time *
-                  settings.speed
-                )
-                +
-                settings.offset;
-
-
-              // ===========================
-              // FLY AROUND TARGET
-              //
-              // X = ซ้าย/ขวา
-              // Y = ขึ้น/ลง
-              // ===========================
-
-              const x =
-                Math.cos(
-                  angle
-                )
-                *
-                settings.radiusX;
-
-
-              const y =
-                Math.sin(
-                  angle
-                )
-                *
-                settings.radiusY;
-
-
-              // ===========================
-              // Z
-              //
-              // บินเข้า-ออกจากโปสเตอร์
-              // ===========================
-
-              const z =
-                settings.height
-                +
-                Math.sin(
-                  angle * 2
-                )
-                *
-                0.12;
-
-
-              holder.position.set(
-                x,
-                y,
-                z
-              );
-
-
-              // ===========================
-              // BOBBING
-              //
-              // เพิ่มการขึ้นลงเล็ก ๆ
-              // ===========================
-
-              holder.position.y +=
-
-                Math.sin(
-                  time * 4 +
-                  settings.offset
-                )
-                *
-                0.04;
-
-
-              // ===========================
-              // ROTATE
-              //
-              // ให้ตัวหันตามการบิน
-              // ===========================
-
-              holder.rotation.z =
-                angle +
-                Math.PI / 2;
-
-
-              // ===========================
-              // TILT
-              //
-              // เอียงเล็กน้อยขณะบิน
-              // ===========================
-
-              holder.rotation.x =
-                Math.sin(
-                  time * 3 +
-                  settings.offset
-                )
-                *
-                0.25;
-
-            }
-
-          );
+          // หมุนช้า ๆ เพื่อให้เห็นชัดว่า model มีอยู่
+          butterflyRoot.rotation.y +=
+            0.01;
 
         }
-
-
-        // =================================
-        // RENDER
-        // =================================
 
         renderer.render(
           scene,
@@ -675,7 +335,6 @@ async function start() {
 
   }
 
-
   catch (error) {
 
     console.error(
@@ -683,13 +342,11 @@ async function start() {
       error
     );
 
-
     statusText.textContent =
       "AR ERROR";
 
   }
 
 }
-
 
 start();
