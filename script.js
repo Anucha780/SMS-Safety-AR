@@ -21,57 +21,6 @@ const statusText =
 
 
 // ========================================
-// SETTINGS
-// ========================================
-
-// ความเร็ว animation
-// มาก = เร็ว
-// น้อย = ช้า
-const ANIMATION_SPEED =
-  0.008;
-
-
-// จุดเริ่มต้น
-const START_SCALE =
-  0.35;
-
-
-// ขนาดตอนจบ
-const END_SCALE =
-  0.85;
-
-
-// ระยะ Z ตอนเริ่ม
-const START_Z =
-  0.05;
-
-
-// ระยะ Z ตอนจบ
-const END_Z =
-  0.30;
-
-
-// ========================================
-// STATE
-// ========================================
-
-let dinoModel =
-  null;
-
-let modelLoaded =
-  false;
-
-let targetVisible =
-  false;
-
-let animationProgress =
-  0;
-
-let animationRunning =
-  false;
-
-
-// ========================================
 // MINDAR
 // ========================================
 
@@ -111,13 +60,14 @@ const anchor =
 // LIGHT
 // ========================================
 
-scene.add(
-
+const ambientLight =
   new THREE.AmbientLight(
     0xffffff,
-    2
-  )
+    2.5
+  );
 
+scene.add(
+  ambientLight
 );
 
 
@@ -127,13 +77,11 @@ const directionalLight =
     3
   );
 
-
 directionalLight.position.set(
   1,
   2,
   3
 );
-
 
 scene.add(
   directionalLight
@@ -141,91 +89,250 @@ scene.add(
 
 
 // ========================================
-// DINO ROOT
-//
-// เราจะ animate ตัวนี้
-// ไม่ไปหมุน GLB โดยตรง
+// BUTTERFLY GROUP
 // ========================================
 
-const dinoRoot =
+const butterflyGroup =
   new THREE.Group();
 
-
 anchor.group.add(
-  dinoRoot
+  butterflyGroup
 );
 
 
-dinoRoot.visible =
+// ซ่อนจนกว่าจะเจอ DINOCAP
+butterflyGroup.visible =
   false;
 
 
 // ========================================
-// MODEL HOLDER
-//
-// ตัวนี้ใช้แก้ orientation ของ GLB อย่างเดียว
+// STATE
 // ========================================
 
-const modelHolder =
-  new THREE.Group();
+const butterflies = [];
 
+let modelLoaded =
+  false;
 
-dinoRoot.add(
-  modelHolder
-);
+let targetVisible =
+  false;
 
 
 // ========================================
-// RESET ANIMATION
+// BUTTERFLY SETTINGS
 // ========================================
 
-function resetDino() {
+const butterflySettings = [
 
-  animationProgress =
-    0;
+  {
+    color: "#ff3b30",
+    radiusX: 0.45,
+    radiusY: 0.25,
+    speed: 1.3,
+    offset: 0,
+    height: 0.05,
+    scale: 0.18
+  },
+
+  {
+    color: "#007aff",
+    radiusX: 0.60,
+    radiusY: 0.32,
+    speed: 1.0,
+    offset: Math.PI * 0.7,
+    height: 0.15,
+    scale: 0.16
+  },
+
+  {
+    color: "#ffd60a",
+    radiusX: 0.52,
+    radiusY: 0.38,
+    speed: 1.5,
+    offset: Math.PI * 1.4,
+    height: 0.25,
+    scale: 0.14
+  }
+
+];
 
 
-  animationRunning =
-    true;
+// ========================================
+// RECOLOR MODEL
+// ========================================
+
+function recolorModel(
+  model,
+  color
+) {
+
+  model.traverse(
+    (child) => {
+
+      if (
+        child.isMesh
+      ) {
+
+        // clone material
+        // เพื่อไม่ให้แต่ละตัวใช้ material เดียวกัน
+        child.material =
+          child.material.clone();
 
 
-  // ----------------------------
-  // เริ่มตรงกลาง DINOCAP
-  // ----------------------------
+        // ย้อมสี
+        child.material.color.set(
+          color
+        );
 
-  dinoRoot.position.set(
-    0,
-    0,
-    START_Z
-  );
+      }
 
-
-  // ----------------------------
-  // เริ่มตัวเล็ก
-  // ----------------------------
-
-  dinoRoot.scale.setScalar(
-    START_SCALE
-  );
-
-
-  // ----------------------------
-  // เริ่ม rotation
-  //
-  // จุดนี้คือการหันหน้า
-  // ----------------------------
-
-  dinoRoot.rotation.set(
-    0,
-    Math.PI / 2,
-    0
+    }
   );
 
 }
 
 
 // ========================================
-// LOAD DINO
+// NORMALIZE MODEL
+// ========================================
+
+function normalizeModel(
+  model
+) {
+
+  const box =
+    new THREE.Box3()
+      .setFromObject(model);
+
+
+  const size =
+    new THREE.Vector3();
+
+
+  box.getSize(
+    size
+  );
+
+
+  const maxDimension =
+    Math.max(
+      size.x,
+      size.y,
+      size.z
+    );
+
+
+  if (
+    maxDimension > 0
+  ) {
+
+    model.scale.setScalar(
+      1 / maxDimension
+    );
+
+  }
+
+
+  // --------------------------------------
+  // CENTER MODEL
+  // --------------------------------------
+
+  const centeredBox =
+    new THREE.Box3()
+      .setFromObject(model);
+
+
+  const center =
+    new THREE.Vector3();
+
+
+  centeredBox.getCenter(
+    center
+  );
+
+
+  model.position.set(
+    -center.x,
+    -center.y,
+    -center.z
+  );
+
+}
+
+
+// ========================================
+// CREATE BUTTERFLY
+// ========================================
+
+function createButterfly(
+  originalModel,
+  settings
+) {
+
+  // Clone model
+  const model =
+    originalModel.clone(true);
+
+
+  // ======================================
+  // HOLDER
+  //
+  // holder เป็นตัวที่บิน
+  // model อยู่ข้างใน
+  // ======================================
+
+  const holder =
+    new THREE.Group();
+
+
+  holder.add(
+    model
+  );
+
+
+  // ======================================
+  // COLOR
+  // ======================================
+
+  recolorModel(
+    model,
+    settings.color
+  );
+
+
+  // ======================================
+  // SIZE
+  // ======================================
+
+  holder.scale.setScalar(
+    settings.scale
+  );
+
+
+  // ======================================
+  // ADD
+  // ======================================
+
+  butterflyGroup.add(
+    holder
+  );
+
+
+  butterflies.push({
+
+    holder: holder,
+
+    model: model,
+
+    settings: settings
+
+  });
+
+}
+
+
+// ========================================
+// LOAD BUTTERFLY
 // ========================================
 
 const loader =
@@ -234,122 +341,67 @@ const loader =
 
 loader.load(
 
-  "./models/dino.glb",
+  "./models/butterfly.glb",
 
+
+  // ======================================
+  // SUCCESS
+  // ======================================
 
   (gltf) => {
 
-    const model =
+    console.log(
+      "BUTTERFLY LOAD SUCCESS"
+    );
+
+
+    const originalModel =
       gltf.scene;
 
 
     // ====================================
-    // NORMALIZE MODEL
+    // NORMALIZE
     // ====================================
 
-    const box =
-      new THREE.Box3()
-        .setFromObject(model);
-
-
-    const size =
-      new THREE.Vector3();
-
-
-    box.getSize(
-      size
-    );
-
-
-    const maxDimension =
-      Math.max(
-        size.x,
-        size.y,
-        size.z
-      );
-
-
-    model.scale.setScalar(
-      0.7 / maxDimension
+    normalizeModel(
+      originalModel
     );
 
 
     // ====================================
-    // CENTER MODEL
+    // CREATE 3 BUTTERFLIES
     // ====================================
 
-    const centeredBox =
-      new THREE.Box3()
-        .setFromObject(model);
+    butterflySettings.forEach(
+      (settings) => {
 
+        createButterfly(
+          originalModel,
+          settings
+        );
 
-    const center =
-      new THREE.Vector3();
-
-
-    centeredBox.getCenter(
-      center
+      }
     );
-
-
-    model.position.set(
-      -center.x,
-      -center.y,
-      -center.z
-    );
-
-
-    // ====================================
-    // IMPORTANT
-    //
-    // GLB ของเราเดิมหันข้าง
-    // ปล่อย model rotation = 0
-    //
-    // การหมุนทั้งหมดไปทำที่ dinoRoot
-    // ====================================
-
-    model.rotation.set(
-      0,
-      0,
-      0
-    );
-
-
-    modelHolder.add(
-      model
-    );
-
-
-    dinoModel =
-      model;
 
 
     modelLoaded =
       true;
 
 
-    console.log(
-      "DINO READY"
-    );
-
-
     if (
       targetVisible
     ) {
 
-      dinoRoot.visible =
+      butterflyGroup.visible =
         true;
-
-
-      resetDino();
 
     }
 
 
     statusText.textContent =
       targetVisible
-        ? "DINOCAP FOUND ✓"
-        : "DINO READY ✓";
+        ? "BUTTERFLIES FLYING ✓"
+        : "BUTTERFLIES READY ✓";
 
   },
 
@@ -357,16 +409,20 @@ loader.load(
   undefined,
 
 
+  // ======================================
+  // ERROR
+  // ======================================
+
   (error) => {
 
     console.error(
-      "DINO ERROR:",
+      "BUTTERFLY LOAD ERROR:",
       error
     );
 
 
     statusText.textContent =
-      "DINO LOAD ERROR";
+      "BUTTERFLY LOAD ERROR";
 
   }
 
@@ -380,23 +436,32 @@ loader.load(
 anchor.onTargetFound =
   () => {
 
+    console.log(
+      "DINOCAP FOUND"
+    );
+
+
     targetVisible =
       true;
-
-
-    statusText.textContent =
-      "DINOCAP FOUND ✓";
 
 
     if (
       modelLoaded
     ) {
 
-      dinoRoot.visible =
+      butterflyGroup.visible =
         true;
 
 
-      resetDino();
+      statusText.textContent =
+        "BUTTERFLIES FLYING ✓";
+
+    }
+
+    else {
+
+      statusText.textContent =
+        "DINOCAP FOUND / LOADING...";
 
     }
 
@@ -410,15 +475,16 @@ anchor.onTargetFound =
 anchor.onTargetLost =
   () => {
 
+    console.log(
+      "DINOCAP LOST"
+    );
+
+
     targetVisible =
       false;
 
 
-    dinoRoot.visible =
-      false;
-
-
-    animationRunning =
+    butterflyGroup.visible =
       false;
 
 
@@ -429,7 +495,15 @@ anchor.onTargetLost =
 
 
 // ========================================
-// START
+// CLOCK
+// ========================================
+
+const clock =
+  new THREE.Clock();
+
+
+// ========================================
+// START AR
 // ========================================
 
 async function start() {
@@ -446,114 +520,150 @@ async function start() {
     statusText.textContent =
       modelLoaded
         ? "Point camera at DINOCAP"
-        : "Loading Dino...";
+        : "Loading Butterflies...";
 
 
     // ====================================
-    // LOOP
+    // ANIMATION LOOP
     // ====================================
 
     renderer.setAnimationLoop(
-
       () => {
 
 
+        const time =
+          clock.getElapsedTime();
+
+
         // =================================
-        // DINO ANIMATION
+        // ANIMATE BUTTERFLIES
         // =================================
 
         if (
           targetVisible &&
-          modelLoaded &&
-          animationRunning
+          modelLoaded
         ) {
 
-          animationProgress +=
-            ANIMATION_SPEED;
+          butterflies.forEach(
+            (butterfly) => {
 
 
-          animationProgress =
-            THREE.MathUtils.clamp(
-              animationProgress,
-              0,
-              1
-            );
+              const {
+                holder,
+                settings
+              } = butterfly;
 
 
-          // smoothstep
-          const t =
-            animationProgress *
-            animationProgress *
-            (
-              3 -
-              2 *
-              animationProgress
-            );
+              // ===========================
+              // ANGLE
+              // ===========================
+
+              const angle =
+                (
+                  time *
+                  settings.speed
+                )
+                +
+                settings.offset;
 
 
-          // ===============================
-          // ROTATE
-          //
-          // 90° → 0°
-          // ===============================
+              // ===========================
+              // FLY AROUND TARGET
+              //
+              // X = ซ้าย/ขวา
+              // Y = ขึ้น/ลง
+              // ===========================
 
-          dinoRoot.rotation.y =
-            THREE.MathUtils.lerp(
-              Math.PI / 2,
-              0,
-              t
-            );
-
-
-          // ===============================
-          // POP OUT
-          // ===============================
-
-          dinoRoot.position.z =
-            THREE.MathUtils.lerp(
-              START_Z,
-              END_Z,
-              t
-            );
+              const x =
+                Math.cos(
+                  angle
+                )
+                *
+                settings.radiusX;
 
 
-          // ===============================
-          // GROW
-          // ===============================
-
-          const scale =
-            THREE.MathUtils.lerp(
-              START_SCALE,
-              END_SCALE,
-              t
-            );
+              const y =
+                Math.sin(
+                  angle
+                )
+                *
+                settings.radiusY;
 
 
-          dinoRoot.scale.setScalar(
-            scale
+              // ===========================
+              // Z
+              //
+              // บินเข้า-ออกจากโปสเตอร์
+              // ===========================
+
+              const z =
+                settings.height
+                +
+                Math.sin(
+                  angle * 2
+                )
+                *
+                0.12;
+
+
+              holder.position.set(
+                x,
+                y,
+                z
+              );
+
+
+              // ===========================
+              // BOBBING
+              //
+              // เพิ่มการขึ้นลงเล็ก ๆ
+              // ===========================
+
+              holder.position.y +=
+
+                Math.sin(
+                  time * 4 +
+                  settings.offset
+                )
+                *
+                0.04;
+
+
+              // ===========================
+              // ROTATE
+              //
+              // ให้ตัวหันตามการบิน
+              // ===========================
+
+              holder.rotation.z =
+                angle +
+                Math.PI / 2;
+
+
+              // ===========================
+              // TILT
+              //
+              // เอียงเล็กน้อยขณะบิน
+              // ===========================
+
+              holder.rotation.x =
+                Math.sin(
+                  time * 3 +
+                  settings.offset
+                )
+                *
+                0.25;
+
+            }
+
           );
-
-
-          // ===============================
-          // FINISHED
-          // ===============================
-
-          if (
-            animationProgress >= 1
-          ) {
-
-            animationRunning =
-              false;
-
-
-            console.log(
-              "DINO ANIMATION FINISHED"
-            );
-
-          }
 
         }
 
+
+        // =================================
+        // RENDER
+        // =================================
 
         renderer.render(
           scene,
@@ -561,7 +671,6 @@ async function start() {
         );
 
       }
-
     );
 
   }
