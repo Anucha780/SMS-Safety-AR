@@ -82,10 +82,17 @@ scene.add(
 // DINO ROOT
 // ========================================
 
-const dinoRoot =
+const anchorRoot =
   new THREE.Group();
 
 anchor.group.add(
+  anchorRoot
+);
+
+const dinoRoot =
+  new THREE.Group();
+
+anchorRoot.add(
   dinoRoot
 );
 
@@ -216,14 +223,20 @@ loader.load(
     // ------------------------------------
 
     model.rotation.set(
-      Math.PI / 2,
       0,
+      Math.PI / 2,
       0
     );
 
 
-    dinoRoot.add(
-      model
+    dinoRoot.scale.setScalar(
+      0.6
+    );
+
+    dinoRoot.position.set(
+      0,
+      -0.15,
+      0.15
     );
 
 
@@ -271,12 +284,15 @@ anchor.onTargetFound =
       true;
 
 
-    revealProgress =
-      0;
-
-
     dinoRoot.visible =
       true;
+
+
+    dinoRoot.rotation.set(
+      0,
+      0,
+      0
+    );
 
 
     statusText.textContent =
@@ -340,117 +356,13 @@ async function start() {
     renderer.setAnimationLoop(
       () => {
 
-
         if (
           targetVisible &&
           dinoModel
         ) {
 
-
-          // =================================
-          // 1. REVEAL ANIMATION
-          // =================================
-
-          revealProgress +=
-            REVEAL_SPEED;
-
-
-          revealProgress =
-            THREE.MathUtils.clamp(
-              revealProgress,
-              0,
-              1
-            );
-
-
-          // smooth animation
-          const easedReveal =
-            revealProgress *
-            revealProgress *
-            (
-              3 -
-              2 *
-              revealProgress
-            );
-
-
-          // Dino ดันออกจาก image
-          dinoRoot.position.z =
-            THREE.MathUtils.lerp(
-              0.02,
-              POP_OUT_DISTANCE,
-              easedReveal
-            );
-
-
-          // =================================
-          // 2. CAMERA DISTANCE
-          // =================================
-
-          camera.getWorldPosition(
-            cameraPosition
-          );
-
-
-          anchor.group.getWorldPosition(
-            targetPosition
-          );
-
-
-          const distance =
-            cameraPosition.distanceTo(
-              targetPosition
-            );
-
-
-          // =================================
-          // 3. DISTANCE → SCALE
-          // =================================
-
-          const normalizedDistance =
-            THREE.MathUtils.clamp(
-
-              (
-                distance -
-                MIN_DISTANCE
-              )
-              /
-              (
-                MAX_DISTANCE -
-                MIN_DISTANCE
-              ),
-
-              0,
-              1
-
-            );
-
-
-          const distanceScale =
-            THREE.MathUtils.lerp(
-              START_SCALE,
-              MAX_SCALE,
-              normalizedDistance
-            );
-
-
-          // reveal ตอนแรกให้ตัวเล็กก่อน
-          const revealScale =
-            THREE.MathUtils.lerp(
-              0.15,
-              1,
-              easedReveal
-            );
-
-
-          const finalScale =
-            distanceScale *
-            revealScale;
-
-
-          dinoRoot.scale.setScalar(
-            finalScale
-          );
+          // ตอนนี้ยังไม่ทำ animation
+          // เอาไว้เช็ก orientation อย่างเดียว
 
         }
 
