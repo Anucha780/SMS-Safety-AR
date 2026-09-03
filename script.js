@@ -1,7 +1,3 @@
-// ========================================
-// IMPORTS
-// ========================================
-
 import * as THREE from "three";
 
 import {
@@ -14,7 +10,7 @@ import {
 
 
 // ========================================
-// HTML ELEMENTS
+// HTML
 // ========================================
 
 const container =
@@ -25,7 +21,7 @@ const statusText =
 
 
 // ========================================
-// MINDAR SETUP
+// MINDAR
 // ========================================
 
 const mindarThree =
@@ -61,17 +57,14 @@ const anchor =
 
 
 // ========================================
-// LIGHTING
+// LIGHT
 // ========================================
 
-const ambientLight =
+scene.add(
   new THREE.AmbientLight(
     0xffffff,
     2
-  );
-
-scene.add(
-  ambientLight
+  )
 );
 
 
@@ -93,7 +86,7 @@ scene.add(
 
 
 // ========================================
-// DINO ROOT
+// DINO
 // ========================================
 
 const dinoRoot =
@@ -104,17 +97,21 @@ anchor.group.add(
 );
 
 
-// ตอนเริ่มยังไม่แสดง
-dinoRoot.visible =
-  false;
-
-
 let dinoModel =
   null;
 
 
+let targetVisible =
+  false;
+
+
+// ตอนเริ่มซ่อน
+dinoRoot.visible =
+  false;
+
+
 // ========================================
-// LOAD DINO
+// LOAD GLB
 // ========================================
 
 const loader =
@@ -125,17 +122,15 @@ loader.load(
 
   "./models/dino.glb",
 
-
-  // SUCCESS
   (gltf) => {
 
     const model =
       gltf.scene;
 
 
-    // ------------------------------------
-    // GET MODEL SIZE
-    // ------------------------------------
+    // ====================================
+    // MODEL SIZE
+    // ====================================
 
     const box =
       new THREE.Box3()
@@ -145,9 +140,7 @@ loader.load(
     const size =
       new THREE.Vector3();
 
-    box.getSize(
-      size
-    );
+    box.getSize(size);
 
 
     const maxDimension =
@@ -158,24 +151,20 @@ loader.load(
       );
 
 
-    // ------------------------------------
-    // NORMALIZE MODEL SIZE
-    // ------------------------------------
-
-    const normalizedScale =
-      0.7 / maxDimension;
+    const scale =
+      0.8 / maxDimension;
 
 
     model.scale.setScalar(
-      normalizedScale
+      scale
     );
 
 
-    // ------------------------------------
+    // ====================================
     // CENTER MODEL
-    // ------------------------------------
+    // ====================================
 
-    const scaledBox =
+    const box2 =
       new THREE.Box3()
         .setFromObject(model);
 
@@ -183,37 +172,29 @@ loader.load(
     const center =
       new THREE.Vector3();
 
-    scaledBox.getCenter(
-      center
+    box2.getCenter(center);
+
+
+    model.position.set(
+      -center.x,
+      -center.y,
+      -center.z
     );
 
 
-    model.position.x -=
-      center.x;
-
-    model.position.y -=
-      center.y;
-
-    model.position.z -=
-      center.z;
-
-
     // ====================================
-    // DINO ORIENTATION
-    //
-    // ตอนนี้หมุนแกน Y 90 องศา
-    // ถ้ายังหันผิด เราจะปรับตรงนี้จุดเดียว
+    // ORIENTATION
     // ====================================
 
     model.rotation.set(
       0,
-      Math.PI / 2,
+      0,
       0
     );
 
 
     // ====================================
-    // ADD MODEL
+    // ADD TO ROOT
     // ====================================
 
     dinoRoot.add(
@@ -225,20 +206,27 @@ loader.load(
       model;
 
 
-    // ====================================
-    // POSITION OF WHOLE DINO
-    // ====================================
-
     dinoRoot.position.set(
       0,
-      -0.1,
+      0,
       0.15
     );
 
 
     dinoRoot.scale.setScalar(
-      0.8
+      1
     );
+
+
+    // สำคัญมาก:
+    // ถ้า Target ถูกเจอไปแล้ว
+    // ให้ Dino โผล่ทันที
+    if (targetVisible) {
+
+      dinoRoot.visible =
+        true;
+
+    }
 
 
     console.log(
@@ -247,26 +235,26 @@ loader.load(
 
 
     statusText.textContent =
-      "Dino ready ✓";
+      targetVisible
+        ? "DINOCAP FOUND ✓"
+        : "Dino ready ✓";
 
   },
 
 
-  // PROGRESS
   undefined,
 
 
-  // ERROR
   (error) => {
 
     console.error(
-      "DINO LOAD ERROR:",
+      "DINO LOAD ERROR",
       error
     );
 
 
     statusText.textContent =
-      "Dino load error";
+      "DINO LOAD ERROR";
 
   }
 
@@ -280,8 +268,12 @@ loader.load(
 anchor.onTargetFound =
   () => {
 
+    targetVisible =
+      true;
+
+
     console.log(
-      "DINOCAP FOUND"
+      "TARGET FOUND"
     );
 
 
@@ -306,13 +298,17 @@ anchor.onTargetFound =
 anchor.onTargetLost =
   () => {
 
-    console.log(
-      "DINOCAP LOST"
-    );
+    targetVisible =
+      false;
 
 
     dinoRoot.visible =
       false;
+
+
+    console.log(
+      "TARGET LOST"
+    );
 
 
     statusText.textContent =
@@ -322,7 +318,7 @@ anchor.onTargetLost =
 
 
 // ========================================
-// START AR
+// START
 // ========================================
 
 async function start() {
@@ -357,7 +353,7 @@ async function start() {
   catch (error) {
 
     console.error(
-      "AR ERROR:",
+      "AR ERROR",
       error
     );
 
