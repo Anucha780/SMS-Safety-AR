@@ -8,20 +8,39 @@ import {
   MindARThree
 } from "mindar-image-three";
 
+
+// ==================================================
+// HTML
+// ==================================================
+
 const container =
   document.getElementById("container");
 
 const statusText =
   document.getElementById("status");
 
+
+// ==================================================
+// MINDAR
+// ==================================================
+
 const mindarThree =
   new MindARThree({
-    container,
-    imageTargetSrc: "./targets/targets.mind",
+
+    container: container,
+
+    // SMS DAY target ใหม่
+    imageTargetSrc:
+      "./targets/targets.mind",
+
     maxTrack: 1,
+
     uiLoading: "yes",
+
     uiScanning: "yes"
+
   });
+
 
 const {
   renderer,
@@ -29,56 +48,67 @@ const {
   camera
 } = mindarThree;
 
-const anchor =
+
+// ==================================================
+// SMS DAY TARGET
+// ==================================================
+
+const target =
   mindarThree.addAnchor(0);
 
 
-// ========================================
+// ==================================================
 // LIGHT
-// ========================================
+// ==================================================
 
-scene.add(
+const ambientLight =
   new THREE.AmbientLight(
     0xffffff,
     2.5
-  )
+  );
+
+scene.add(
+  ambientLight
 );
 
-const light =
+
+const directionalLight =
   new THREE.DirectionalLight(
     0xffffff,
     3
   );
 
-light.position.set(
+directionalLight.position.set(
   1,
   2,
   3
 );
 
 scene.add(
-  light
+  directionalLight
 );
 
 
-// ========================================
-// ROOT
-// ========================================
+// ==================================================
+// WAVEBOY ROOT
+// ==================================================
 
 const waveboyRoot =
   new THREE.Group();
 
-anchor.group.add(
+target.group.add(
   waveboyRoot
 );
 
+
+// ซ่อนไว้จนกว่าจะพบ SMS DAY
 waveboyRoot.visible =
   false;
 
 
-// ========================================
+// ==================================================
 // STATE
-// ========================================
+// ==================================================
 
 let waveboy =
   null;
@@ -89,123 +119,169 @@ let mixer =
 let modelLoaded =
   false;
 
-let targetVisible =
+let targetFound =
   false;
 
 
-// ========================================
-// LOAD WAVEOY
-// ========================================
+// ==================================================
+// LOAD WAVEBOY
+// ==================================================
 
 const loader =
   new GLTFLoader();
+
 
 loader.load(
 
   "./models/waveboy.glb",
 
+
+  // ------------------------------------------------
+  // LOAD SUCCESS
+  // ------------------------------------------------
+
   (gltf) => {
 
     console.log(
-      "WAVEBOY LOAD SUCCESS"
+      "Waveboy loaded successfully"
     );
 
+
     console.log(
-      "ANIMATIONS:",
+      "Animations:",
       gltf.animations
     );
+
 
     waveboy =
       gltf.scene;
 
 
-    // ====================================
-    // NORMALIZE SIZE
-    // ====================================
+    // ==============================================
+    // FIND MODEL SIZE
+    // ==============================================
 
-    const box =
+    const originalBox =
       new THREE.Box3()
         .setFromObject(
           waveboy
         );
 
-    const size =
+
+    const originalSize =
       new THREE.Vector3();
 
-    box.getSize(
-      size
+
+    originalBox.getSize(
+      originalSize
     );
 
-    const maxDimension =
+
+    console.log(
+      "Waveboy original size:",
+      originalSize
+    );
+
+
+    const largestDimension =
       Math.max(
-        size.x,
-        size.y,
-        size.z
+
+        originalSize.x,
+
+        originalSize.y,
+
+        originalSize.z
+
       );
 
+
+    // ==============================================
+    // NORMALIZE SIZE
+    // ==============================================
+
     if (
-      maxDimension > 0
+      largestDimension > 0
     ) {
 
-      waveboy.scale.setScalar(
+      const normalizeScale =
         0.7 /
-        maxDimension
+        largestDimension;
+
+
+      waveboy.scale.setScalar(
+        normalizeScale
       );
 
     }
 
 
-    // ====================================
+    // ==============================================
     // CENTER MODEL
-    // ====================================
+    // ==============================================
 
-    const newBox =
+    const scaledBox =
       new THREE.Box3()
         .setFromObject(
           waveboy
         );
 
+
     const center =
       new THREE.Vector3();
 
-    newBox.getCenter(
+
+    scaledBox.getCenter(
       center
     );
 
+
     waveboy.position.set(
+
       -center.x,
+
       -center.y,
+
       -center.z
+
     );
 
 
-    // ====================================
-    // ADD MODEL
-    // ====================================
+    // ==============================================
+    // ADD WAVEBOY
+    // ==============================================
 
     waveboyRoot.add(
       waveboy
     );
 
 
-    // ====================================
-    // POSITION
-    // ====================================
+    // ==============================================
+    // POSITION ON SMS DAY
+    // ==============================================
 
     waveboyRoot.position.set(
-      0,
-      0,
-      0.2
+
+      0,      // center X
+
+      0,      // center Y
+
+      0.15    // slightly in front of poster
+
     );
+
+
+    // ==============================================
+    // MODEL SIZE
+    // ==============================================
 
     waveboyRoot.scale.setScalar(
       0.8
     );
 
 
-    // ====================================
+    // ==============================================
     // ANIMATION
-    // ====================================
+    // ==============================================
 
     if (
       gltf.animations.length > 0
@@ -216,45 +292,60 @@ loader.load(
           waveboy
         );
 
+
+      // ใช้ animation ตัวแรกใน GLB
       const clip =
         gltf.animations[0];
 
+
       console.log(
-        "PLAYING CLIP:",
+        "Playing animation:",
         clip.name
       );
+
 
       const action =
         mixer.clipAction(
           clip
         );
 
+
       action.reset();
+
+
+      action.setLoop(
+        THREE.LoopRepeat
+      );
+
+
       action.play();
 
-      statusText.textContent =
-        "WAVEBOY ANIMATION READY ✓";
+
+      console.log(
+        "Waveboy animation started"
+      );
 
     }
 
     else {
 
       console.warn(
-        "NO ANIMATION FOUND"
+        "Waveboy has NO animation"
       );
-
-      statusText.textContent =
-        "WAVEBOY LOADED / NO ANIMATION";
 
     }
 
+
+    // ==============================================
+    // MODEL READY
+    // ==============================================
 
     modelLoaded =
       true;
 
 
     if (
-      targetVisible
+      targetFound
     ) {
 
       waveboyRoot.visible =
@@ -262,34 +353,55 @@ loader.load(
 
     }
 
+
+    statusText.textContent =
+      "Waveboy Ready ✓";
+
   },
 
+
+  // ------------------------------------------------
+  // PROGRESS
+  // ------------------------------------------------
+
   undefined,
+
+
+  // ------------------------------------------------
+  // ERROR
+  // ------------------------------------------------
 
   (error) => {
 
     console.error(
-      "WAVEBOY LOAD ERROR:",
+      "Waveboy loading error:",
       error
     );
 
+
     statusText.textContent =
-      "WAVEBOY LOAD ERROR";
+      "Waveboy Load Error";
 
   }
 
 );
 
 
-// ========================================
-// TARGET FOUND
-// ========================================
+// ==================================================
+// SMS DAY FOUND
+// ==================================================
 
-anchor.onTargetFound =
+target.onTargetFound =
   () => {
 
-    targetVisible =
+    console.log(
+      "SMS DAY TARGET FOUND"
+    );
+
+
+    targetFound =
       true;
+
 
     if (
       modelLoaded
@@ -298,78 +410,111 @@ anchor.onTargetFound =
       waveboyRoot.visible =
         true;
 
-      statusText.textContent =
+
+      if (
         mixer
-          ? "WAVEBOY WAVING ✓"
-          : "WAVEBOY FOUND ✓";
+      ) {
+
+        statusText.textContent =
+          "SMS DAY FOUND • Waveboy Waving ✓";
+
+      }
+
+      else {
+
+        statusText.textContent =
+          "SMS DAY FOUND • No Animation";
+
+      }
 
     }
 
     else {
 
       statusText.textContent =
-        "TARGET FOUND / LOADING...";
+        "SMS DAY FOUND • Loading Waveboy...";
 
     }
 
   };
 
 
-// ========================================
-// TARGET LOST
-// ========================================
+// ==================================================
+// SMS DAY LOST
+// ==================================================
 
-anchor.onTargetLost =
+target.onTargetLost =
   () => {
 
-    targetVisible =
+    console.log(
+      "SMS DAY TARGET LOST"
+    );
+
+
+    targetFound =
       false;
+
 
     waveboyRoot.visible =
       false;
 
+
     statusText.textContent =
-      "Point camera at target";
+      "Scan SMS DAY poster";
 
   };
 
 
-// ========================================
+// ==================================================
 // CLOCK
-// ========================================
+// ==================================================
 
 const clock =
   new THREE.Clock();
 
 
-// ========================================
-// START
-// ========================================
+// ==================================================
+// START AR
+// ==================================================
 
-async function start() {
+async function startAR() {
 
   try {
 
     statusText.textContent =
-      "Starting AR...";
+      "Starting SMS DAY AR...";
+
 
     await mindarThree.start();
 
+
     statusText.textContent =
       modelLoaded
-        ? "Point camera at target"
+        ? "Scan SMS DAY poster"
         : "Loading Waveboy...";
 
 
+    // ==============================================
+    // RENDER LOOP
+    // ==============================================
+
     renderer.setAnimationLoop(
+
       () => {
+
+
+        // ------------------------------------------
+        // TIME
+        // ------------------------------------------
 
         const delta =
           clock.getDelta();
 
 
-        // สำคัญมาก
-        // ทำให้ animation ใน GLB ขยับ
+        // ------------------------------------------
+        // UPDATE WAVEBOY ANIMATION
+        // ------------------------------------------
+
         if (
           mixer
         ) {
@@ -381,29 +526,40 @@ async function start() {
         }
 
 
+        // ------------------------------------------
+        // RENDER
+        // ------------------------------------------
+
         renderer.render(
           scene,
           camera
         );
 
       }
+
     );
 
   }
 
+
   catch (error) {
 
     console.error(
-      "AR ERROR:",
+      "AR Start Error:",
       error
     );
 
+
     statusText.textContent =
-      "AR ERROR";
+      "AR Start Error";
 
   }
 
 }
 
 
-start();
+// ==================================================
+// RUN
+// ==================================================
+
+startAR();

@@ -2,6 +2,7 @@
 <html lang="en">
 
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -9,38 +10,66 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>SMS Safety AR</title>
+  <title>SMS DAY AR</title>
 
-  <link rel="stylesheet" href="./style.css">
-</head>
+  <link
+    rel="stylesheet"
+    href="./style.css"
+  >
 
-<body>
 
-  <div id="container"></div>
-
-  <div id="status">
-    Starting AR...
-  </div>
+  <!-- ===================================
+       THREE + MINDAR IMPORT MAP
+  ==================================== -->
 
   <script type="importmap">
   {
     "imports": {
+
       "three":
-      "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "https://unpkg.com/three@0.160.0/build/three.module.js",
 
       "three/addons/":
-      "https://unpkg.com/three@0.160.0/examples/jsm/",
+        "https://unpkg.com/three@0.160.0/examples/jsm/",
 
       "mindar-image-three":
-      "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+        "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+
     }
   }
   </script>
 
+</head>
+
+
+<body>
+
+
+  <!-- ===================================
+       AR CONTAINER
+  ==================================== -->
+
+  <div id="container"></div>
+
+
+  <!-- ===================================
+       STATUS
+  ==================================== -->
+
+  <div id="status">
+    Starting SMS DAY AR...
+  </div>
+
+
+  <!-- ===================================
+       MAIN SCRIPT
+  ==================================== -->
+
   <script
     type="module"
-    src="./script.js">
-  </script>
+    src="./script.js"
+  ></script>
+
 
 </body>
 
