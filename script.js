@@ -1,5 +1,4 @@
 import * as THREE from "three";
-
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 
 import {
@@ -54,13 +53,12 @@ const anchor =
 // LIGHT
 // ========================================
 
-const ambientLight =
+scene.add(
   new THREE.AmbientLight(
     0xffffff,
     2
-  );
-
-scene.add(ambientLight);
+  )
+);
 
 
 const directionalLight =
@@ -75,21 +73,66 @@ directionalLight.position.set(
   3
 );
 
-scene.add(directionalLight);
+scene.add(
+  directionalLight
+);
 
 
 // ========================================
-// DINO WRAPPER
+// DINO ROOT
 // ========================================
 
 const dinoRoot =
   new THREE.Group();
 
-anchor.group.add(dinoRoot);
+anchor.group.add(
+  dinoRoot
+);
+
+
+let dinoModel = null;
+
+let targetVisible = false;
+
+let revealProgress = 0;
 
 
 // ========================================
-// LOAD DINO
+// SETTINGS
+// ========================================
+
+// Dino เริ่มเล็กแค่ไหน
+const START_SCALE =
+  0.35;
+
+
+// Dino ใหญ่สุดแค่ไหน
+const MAX_SCALE =
+  1.8;
+
+
+// ระยะกล้องใกล้
+const MIN_DISTANCE =
+  0.7;
+
+
+// ระยะกล้องไกล
+const MAX_DISTANCE =
+  2.8;
+
+
+// ความเร็วตอนโผล่ออกจากภาพ
+const REVEAL_SPEED =
+  0.025;
+
+
+// ระยะที่ Dino ดันออกจากภาพ
+const POP_OUT_DISTANCE =
+  0.35;
+
+
+// ========================================
+// LOAD MODEL
 // ========================================
 
 const loader =
@@ -107,7 +150,7 @@ loader.load(
 
 
     // ------------------------------------
-    // Calculate model size
+    // Normalize model size
     // ------------------------------------
 
     const box =
@@ -121,10 +164,6 @@ loader.load(
     box.getSize(size);
 
 
-    // ------------------------------------
-    // Normalize size
-    // ------------------------------------
-
     const maxDimension =
       Math.max(
         size.x,
@@ -134,7 +173,7 @@ loader.load(
 
 
     const normalizedScale =
-      0.6 / maxDimension;
+      1 / maxDimension;
 
 
     model.scale.setScalar(
@@ -146,7 +185,7 @@ loader.load(
     // Center model
     // ------------------------------------
 
-    const boxAfterScale =
+    const newBox =
       new THREE.Box3()
         .setFromObject(model);
 
@@ -154,7 +193,7 @@ loader.load(
     const center =
       new THREE.Vector3();
 
-    boxAfterScale.getCenter(center);
+    newBox.getCenter(center);
 
 
     model.position.x -=
@@ -164,20 +203,36 @@ loader.load(
       center.y;
 
 
-    // วาง Dino เหนือ target เล็กน้อย
-    model.position.z =
-      0.05;
+    // ------------------------------------
+    // FIXED ROTATION
+    //
+    // ไม่ animate rotation
+    // Dino จะไม่หมุน/พลิกเอง
+    // ------------------------------------
+
+    model.rotation.set(
+      0,
+      0,
+      0
+    );
 
 
-    dinoRoot.add(model);
+    dinoRoot.add(
+      model
+    );
+
+
+    dinoModel =
+      model;
+
+
+    dinoRoot.visible =
+      false;
 
 
     console.log(
-      "DINO LOADED"
+      "DINO READY"
     );
-
-    statusText.textContent =
-      "Dino ready ✓";
 
   },
 
@@ -201,15 +256,23 @@ loader.load(
 
 
 // ========================================
-// TARGET EVENTS
+// TARGET FOUND
 // ========================================
 
 anchor.onTargetFound =
   () => {
 
-    console.log(
-      "TARGET FOUND"
-    );
+    targetVisible =
+      true;
+
+
+    revealProgress =
+      0;
+
+
+    dinoRoot.visible =
+      true;
+
 
     statusText.textContent =
       "DINOCAP FOUND ✓";
@@ -217,17 +280,37 @@ anchor.onTargetFound =
   };
 
 
+// ========================================
+// TARGET LOST
+// ========================================
+
 anchor.onTargetLost =
   () => {
 
-    console.log(
-      "TARGET LOST"
-    );
+    targetVisible =
+      false;
+
+
+    dinoRoot.visible =
+      false;
+
 
     statusText.textContent =
       "Point camera at DINOCAP";
 
   };
+
+
+// ========================================
+// TEMP VECTOR
+// ========================================
+
+const cameraPosition =
+  new THREE.Vector3();
+
+
+const targetPosition =
+  new THREE.Vector3();
 
 
 // ========================================
@@ -252,6 +335,121 @@ async function start() {
     renderer.setAnimationLoop(
       () => {
 
+
+        if (
+          targetVisible &&
+          dinoModel
+        ) {
+
+
+          // =================================
+          // 1. REVEAL ANIMATION
+          // =================================
+
+          revealProgress +=
+            REVEAL_SPEED;
+
+
+          revealProgress =
+            THREE.MathUtils.clamp(
+              revealProgress,
+              0,
+              1
+            );
+
+
+          // smooth animation
+          const easedReveal =
+            revealProgress *
+            revealProgress *
+            (
+              3 -
+              2 *
+              revealProgress
+            );
+
+
+          // Dino ดันออกจาก image
+          dinoRoot.position.z =
+            THREE.MathUtils.lerp(
+              0.02,
+              POP_OUT_DISTANCE,
+              easedReveal
+            );
+
+
+          // =================================
+          // 2. CAMERA DISTANCE
+          // =================================
+
+          camera.getWorldPosition(
+            cameraPosition
+          );
+
+
+          anchor.group.getWorldPosition(
+            targetPosition
+          );
+
+
+          const distance =
+            cameraPosition.distanceTo(
+              targetPosition
+            );
+
+
+          // =================================
+          // 3. DISTANCE → SCALE
+          // =================================
+
+          const normalizedDistance =
+            THREE.MathUtils.clamp(
+
+              (
+                distance -
+                MIN_DISTANCE
+              )
+              /
+              (
+                MAX_DISTANCE -
+                MIN_DISTANCE
+              ),
+
+              0,
+              1
+
+            );
+
+
+          const distanceScale =
+            THREE.MathUtils.lerp(
+              START_SCALE,
+              MAX_SCALE,
+              normalizedDistance
+            );
+
+
+          // reveal ตอนแรกให้ตัวเล็กก่อน
+          const revealScale =
+            THREE.MathUtils.lerp(
+              0.15,
+              1,
+              easedReveal
+            );
+
+
+          const finalScale =
+            distanceScale *
+            revealScale;
+
+
+          dinoRoot.scale.setScalar(
+            finalScale
+          );
+
+        }
+
+
         renderer.render(
           scene,
           camera
@@ -262,10 +460,11 @@ async function start() {
 
   }
 
+
   catch (error) {
 
     console.error(
-      "MINDAR ERROR:",
+      "AR ERROR:",
       error
     );
 
