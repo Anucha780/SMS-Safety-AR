@@ -8,14 +8,9 @@ import {
 const container =
   document.getElementById("ar-container");
 
-
 const statusText =
   document.getElementById("status");
 
-
-// ========================================
-// MINDAR
-// ========================================
 
 const mindarThree =
   new MindARThree({
@@ -41,72 +36,36 @@ const {
 } = mindarThree;
 
 
-// ========================================
-// TARGET 0
-// ========================================
-
 const anchor =
   mindarThree.addAnchor(0);
 
 
-// ========================================
-// TEST OBJECT
-//
-// สร้างสี่เหลี่ยมเขียวเล็ก ๆ
-// เพื่อยืนยันว่า anchor ทำงานจริง
-// ========================================
-
+// test plane
 const geometry =
   new THREE.PlaneGeometry(
     0.3,
     0.3
   );
 
-
 const material =
   new THREE.MeshBasicMaterial({
-
     color: 0x00ff00,
-
-    transparent: true,
-
-    opacity: 0.8,
-
     side: THREE.DoubleSide
-
   });
 
-
-const testPlane =
+const plane =
   new THREE.Mesh(
     geometry,
     material
   );
 
-
-testPlane.position.set(
-  0,
-  0,
-  0.01
-);
-
-
 anchor.group.add(
-  testPlane
+  plane
 );
 
-
-// ========================================
-// FOUND / LOST
-// ========================================
 
 anchor.onTargetFound =
   () => {
-
-    console.log(
-      "TARGET FOUND"
-    );
-
 
     statusText.textContent =
       "TARGET FOUND ✓";
@@ -117,20 +76,11 @@ anchor.onTargetFound =
 anchor.onTargetLost =
   () => {
 
-    console.log(
-      "TARGET LOST"
-    );
-
-
     statusText.textContent =
       "Point camera at DINOCAP";
 
   };
 
-
-// ========================================
-// START
-// ========================================
 
 async function start() {
 
@@ -162,14 +112,10 @@ async function start() {
 
   catch (error) {
 
-    console.error(
-      "AR ERROR:",
-      error
-    );
-
+    console.error(error);
 
     statusText.textContent =
-      "Unable to start AR";
+      "AR START ERROR";
 
   }
 

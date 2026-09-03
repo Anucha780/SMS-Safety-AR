@@ -13,12 +13,7 @@ body {
   overflow: hidden;
 
   background: black;
-
-  font-family:
-    Arial,
-    sans-serif;
 }
-
 
 #ar-container {
   position: relative;
@@ -29,7 +24,6 @@ body {
   overflow: hidden;
 }
 
-
 #status {
   position: fixed;
 
@@ -38,23 +32,19 @@ body {
   top: 20px;
   left: 50%;
 
-  transform:
-    translateX(-50%);
+  transform: translateX(-50%);
 
-  padding:
-    10px 16px;
+  padding: 10px 16px;
 
-  border-radius:
-    12px;
+  border-radius: 12px;
 
-  background:
-    rgba(0, 0, 0, 0.65);
+  background: rgba(0, 0, 0, 0.65);
 
   color: white;
 
-  text-align: center;
+  font-family: Arial, sans-serif;
 
-  white-space: nowrap;
+  text-align: center;
 
   pointer-events: none;
 }
