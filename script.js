@@ -33,21 +33,21 @@ const anchor =
   mindarThree.addAnchor(0);
 
 
-// ======================================
+// ========================================
 // LIGHT
-// ======================================
+// ========================================
 
 scene.add(
   new THREE.AmbientLight(
     0xffffff,
-    4
+    2.5
   )
 );
 
 const light =
   new THREE.DirectionalLight(
     0xffffff,
-    4
+    3
   );
 
 light.position.set(
@@ -56,107 +56,87 @@ light.position.set(
   3
 );
 
-scene.add(light);
-
-
-// ======================================
-// DEBUG GREEN BOX
-// ======================================
-
-const debugBox =
-  new THREE.Mesh(
-
-    new THREE.BoxGeometry(
-      0.25,
-      0.25,
-      0.25
-    ),
-
-    new THREE.MeshBasicMaterial({
-      color: 0x00ff00
-    })
-
-  );
-
-debugBox.position.set(
-  0,
-  0,
-  0.15
-);
-
-anchor.group.add(
-  debugBox
+scene.add(
+  light
 );
 
 
-// ======================================
-// BUTTERFLY HOLDER
-// ======================================
+// ========================================
+// ROOT
+// ========================================
 
-const butterflyHolder =
+const waveboyRoot =
   new THREE.Group();
 
 anchor.group.add(
-  butterflyHolder
+  waveboyRoot
 );
 
-butterflyHolder.position.set(
-  0.35,
-  0,
-  0.2
-);
+waveboyRoot.visible =
+  false;
 
 
-// ======================================
-// LOAD BUTTERFLY
-// ======================================
+// ========================================
+// STATE
+// ========================================
+
+let waveboy =
+  null;
+
+let mixer =
+  null;
+
+let modelLoaded =
+  false;
+
+let targetVisible =
+  false;
+
+
+// ========================================
+// LOAD WAVEOY
+// ========================================
 
 const loader =
   new GLTFLoader();
 
-let butterfly = null;
-
 loader.load(
 
-  "./models/butterfly.glb",
+  "./models/waveboy.glb",
 
   (gltf) => {
 
     console.log(
-      "BUTTERFLY LOADED",
-      gltf
+      "WAVEBOY LOAD SUCCESS"
     );
 
-    butterfly =
+    console.log(
+      "ANIMATIONS:",
+      gltf.animations
+    );
+
+    waveboy =
       gltf.scene;
 
 
-    // ==================================
-    // CHECK ORIGINAL SIZE
-    // ==================================
+    // ====================================
+    // NORMALIZE SIZE
+    // ====================================
 
     const box =
       new THREE.Box3()
         .setFromObject(
-          butterfly
+          waveboy
         );
 
     const size =
       new THREE.Vector3();
 
-    box.getSize(size);
-
-    console.log(
-      "ORIGINAL SIZE",
+    box.getSize(
       size
     );
 
-
-    // ==================================
-    // FORCE SIZE
-    // ==================================
-
-    const largest =
+    const maxDimension =
       Math.max(
         size.x,
         size.y,
@@ -164,27 +144,25 @@ loader.load(
       );
 
     if (
-      largest > 0
+      maxDimension > 0
     ) {
 
-      const scale =
-        0.5 / largest;
-
-      butterfly.scale.setScalar(
-        scale
+      waveboy.scale.setScalar(
+        0.7 /
+        maxDimension
       );
 
     }
 
 
-    // ==================================
-    // RECALCULATE CENTER
-    // ==================================
+    // ====================================
+    // CENTER MODEL
+    // ====================================
 
     const newBox =
       new THREE.Box3()
         .setFromObject(
-          butterfly
+          waveboy
         );
 
     const center =
@@ -194,52 +172,95 @@ loader.load(
       center
     );
 
-    butterfly.position.set(
+    waveboy.position.set(
       -center.x,
       -center.y,
       -center.z
     );
 
 
-    // ==================================
-    // FORCE MATERIAL VISIBLE
-    // ==================================
+    // ====================================
+    // ADD MODEL
+    // ====================================
 
-    butterfly.traverse(
-      (child) => {
-
-        if (
-          child.isMesh
-        ) {
-
-          console.log(
-            "MESH FOUND",
-            child.name
-          );
-
-          child.material =
-            new THREE.MeshBasicMaterial({
-              color: 0xff00ff,
-              side: THREE.DoubleSide
-            });
-
-        }
-
-      }
+    waveboyRoot.add(
+      waveboy
     );
 
 
-    // ==================================
-    // ADD
-    // ==================================
+    // ====================================
+    // POSITION
+    // ====================================
 
-    butterflyHolder.add(
-      butterfly
+    waveboyRoot.position.set(
+      0,
+      0,
+      0.2
+    );
+
+    waveboyRoot.scale.setScalar(
+      0.8
     );
 
 
-    statusText.textContent =
-      "BUTTERFLY LOADED ✓";
+    // ====================================
+    // ANIMATION
+    // ====================================
+
+    if (
+      gltf.animations.length > 0
+    ) {
+
+      mixer =
+        new THREE.AnimationMixer(
+          waveboy
+        );
+
+      const clip =
+        gltf.animations[0];
+
+      console.log(
+        "PLAYING CLIP:",
+        clip.name
+      );
+
+      const action =
+        mixer.clipAction(
+          clip
+        );
+
+      action.reset();
+      action.play();
+
+      statusText.textContent =
+        "WAVEBOY ANIMATION READY ✓";
+
+    }
+
+    else {
+
+      console.warn(
+        "NO ANIMATION FOUND"
+      );
+
+      statusText.textContent =
+        "WAVEBOY LOADED / NO ANIMATION";
+
+    }
+
+
+    modelLoaded =
+      true;
+
+
+    if (
+      targetVisible
+    ) {
+
+      waveboyRoot.visible =
+        true;
+
+    }
 
   },
 
@@ -248,57 +269,82 @@ loader.load(
   (error) => {
 
     console.error(
-      "BUTTERFLY ERROR",
+      "WAVEBOY LOAD ERROR:",
       error
     );
 
     statusText.textContent =
-      "BUTTERFLY ERROR";
+      "WAVEBOY LOAD ERROR";
 
   }
 
 );
 
 
-// ======================================
+// ========================================
 // TARGET FOUND
-// ======================================
+// ========================================
 
 anchor.onTargetFound =
   () => {
 
-    console.log(
-      "TARGET FOUND"
-    );
+    targetVisible =
+      true;
 
-    statusText.textContent =
-      butterfly
-        ? "TARGET + BUTTERFLY ✓"
-        : "TARGET FOUND / LOADING MODEL";
+    if (
+      modelLoaded
+    ) {
+
+      waveboyRoot.visible =
+        true;
+
+      statusText.textContent =
+        mixer
+          ? "WAVEBOY WAVING ✓"
+          : "WAVEBOY FOUND ✓";
+
+    }
+
+    else {
+
+      statusText.textContent =
+        "TARGET FOUND / LOADING...";
+
+    }
 
   };
 
+
+// ========================================
+// TARGET LOST
+// ========================================
 
 anchor.onTargetLost =
   () => {
 
-    console.log(
-      "TARGET LOST"
-    );
+    targetVisible =
+      false;
+
+    waveboyRoot.visible =
+      false;
 
     statusText.textContent =
-      "Point camera at DINOCAP";
+      "Point camera at target";
 
   };
 
 
-// ======================================
-// ANIMATION
-// ======================================
+// ========================================
+// CLOCK
+// ========================================
 
 const clock =
   new THREE.Clock();
 
+
+// ========================================
+// START
+// ========================================
 
 async function start() {
 
@@ -310,59 +356,27 @@ async function start() {
     await mindarThree.start();
 
     statusText.textContent =
-      "Point camera at DINOCAP";
+      modelLoaded
+        ? "Point camera at target"
+        : "Loading Waveboy...";
 
 
     renderer.setAnimationLoop(
       () => {
 
-        const time =
-          clock.getElapsedTime();
+        const delta =
+          clock.getDelta();
 
 
-        // ------------------------------
-        // DEBUG BOX ROTATION
-        // ------------------------------
-
-        debugBox.rotation.x =
-          time;
-
-        debugBox.rotation.y =
-          time;
-
-
-        // ------------------------------
-        // BUTTERFLY
-        // ------------------------------
-
+        // สำคัญมาก
+        // ทำให้ animation ใน GLB ขยับ
         if (
-          butterfly
+          mixer
         ) {
 
-          // บินเป็นวง
-          butterflyHolder.position.x =
-            Math.cos(time) *
-            0.45;
-
-          butterflyHolder.position.y =
-            Math.sin(time) *
-            0.30;
-
-          butterflyHolder.position.z =
-            0.25 +
-            Math.sin(
-              time * 2
-            ) *
-            0.1;
-
-
-          // หมุนให้เห็นว่ามันเคลื่อน
-          butterflyHolder.rotation.y =
-            time;
-
-          butterflyHolder.rotation.z =
-            Math.sin(time) *
-            0.3;
+          mixer.update(
+            delta
+          );
 
         }
 
@@ -379,7 +393,10 @@ async function start() {
 
   catch (error) {
 
-    console.error(error);
+    console.error(
+      "AR ERROR:",
+      error
+    );
 
     statusText.textContent =
       "AR ERROR";
