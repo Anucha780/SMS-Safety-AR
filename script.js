@@ -1,10 +1,21 @@
+// ========================================
+// IMPORTS
+// ========================================
+
 import * as THREE from "three";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+import {
+  GLTFLoader
+} from "three/addons/loaders/GLTFLoader.js";
 
 import {
   MindARThree
 } from "mindar-image-three";
 
+
+// ========================================
+// HTML ELEMENTS
+// ========================================
 
 const container =
   document.getElementById("container");
@@ -14,7 +25,7 @@ const statusText =
 
 
 // ========================================
-// MINDAR
+// MINDAR SETUP
 // ========================================
 
 const mindarThree =
@@ -50,14 +61,17 @@ const anchor =
 
 
 // ========================================
-// LIGHT
+// LIGHTING
 // ========================================
 
-scene.add(
+const ambientLight =
   new THREE.AmbientLight(
     0xffffff,
     2
-  )
+  );
+
+scene.add(
+  ambientLight
 );
 
 
@@ -82,69 +96,25 @@ scene.add(
 // DINO ROOT
 // ========================================
 
-const anchorRoot =
-  new THREE.Group();
-
-anchor.group.add(
-  anchorRoot
-);
-
 const dinoRoot =
   new THREE.Group();
 
-anchorRoot.add(
+anchor.group.add(
   dinoRoot
 );
 
-dinoRoot.position.set(
-  0,
-  -0.15,
-  0.02
-);
 
-let dinoModel = null;
+// ตอนเริ่มยังไม่แสดง
+dinoRoot.visible =
+  false;
 
-let targetVisible = false;
 
-let revealProgress = 0;
+let dinoModel =
+  null;
 
 
 // ========================================
-// SETTINGS
-// ========================================
-
-// Dino เริ่มเล็กแค่ไหน
-const START_SCALE =
-  0.18;
-
-
-// Dino ใหญ่สุดแค่ไหน
-const MAX_SCALE =
-  2.6;
-
-
-// ระยะกล้องใกล้
-const MIN_DISTANCE =
-  0.7;
-
-
-// ระยะกล้องไกล
-const MAX_DISTANCE =
-  2.8;
-
-
-// ความเร็วตอนโผล่ออกจากภาพ
-const REVEAL_SPEED =
-  0.025;
-
-
-// ระยะที่ Dino ดันออกจากภาพ
-const POP_OUT_DISTANCE =
-  0.65;
-
-
-// ========================================
-// LOAD MODEL
+// LOAD DINO
 // ========================================
 
 const loader =
@@ -155,6 +125,8 @@ loader.load(
 
   "./models/dino.glb",
 
+
+  // SUCCESS
   (gltf) => {
 
     const model =
@@ -162,7 +134,7 @@ loader.load(
 
 
     // ------------------------------------
-    // Normalize model size
+    // GET MODEL SIZE
     // ------------------------------------
 
     const box =
@@ -173,7 +145,9 @@ loader.load(
     const size =
       new THREE.Vector3();
 
-    box.getSize(size);
+    box.getSize(
+      size
+    );
 
 
     const maxDimension =
@@ -184,8 +158,12 @@ loader.load(
       );
 
 
+    // ------------------------------------
+    // NORMALIZE MODEL SIZE
+    // ------------------------------------
+
     const normalizedScale =
-      1 / maxDimension;
+      0.7 / maxDimension;
 
 
     model.scale.setScalar(
@@ -194,10 +172,10 @@ loader.load(
 
 
     // ------------------------------------
-    // Center model
+    // CENTER MODEL
     // ------------------------------------
 
-    const newBox =
+    const scaledBox =
       new THREE.Box3()
         .setFromObject(model);
 
@@ -205,7 +183,9 @@ loader.load(
     const center =
       new THREE.Vector3();
 
-    newBox.getCenter(center);
+    scaledBox.getCenter(
+      center
+    );
 
 
     model.position.x -=
@@ -214,13 +194,16 @@ loader.load(
     model.position.y -=
       center.y;
 
+    model.position.z -=
+      center.z;
 
-    // ------------------------------------
-    // FIXED ROTATION
+
+    // ====================================
+    // DINO ORIENTATION
     //
-    // ไม่ animate rotation
-    // Dino จะไม่หมุน/พลิกเอง
-    // ------------------------------------
+    // ตอนนี้หมุนแกน Y 90 องศา
+    // ถ้ายังหันผิด เราจะปรับตรงนี้จุดเดียว
+    // ====================================
 
     model.rotation.set(
       0,
@@ -229,14 +212,12 @@ loader.load(
     );
 
 
-    dinoRoot.scale.setScalar(
-      0.6
-    );
+    // ====================================
+    // ADD MODEL
+    // ====================================
 
-    dinoRoot.position.set(
-      0,
-      -0.15,
-      0.15
+    dinoRoot.add(
+      model
     );
 
 
@@ -244,26 +225,45 @@ loader.load(
       model;
 
 
-    dinoRoot.visible =
-      false;
+    // ====================================
+    // POSITION OF WHOLE DINO
+    // ====================================
+
+    dinoRoot.position.set(
+      0,
+      -0.1,
+      0.15
+    );
+
+
+    dinoRoot.scale.setScalar(
+      0.8
+    );
 
 
     console.log(
-      "DINO READY"
+      "DINO LOADED"
     );
+
+
+    statusText.textContent =
+      "Dino ready ✓";
 
   },
 
 
+  // PROGRESS
   undefined,
 
 
+  // ERROR
   (error) => {
 
     console.error(
       "DINO LOAD ERROR:",
       error
     );
+
 
     statusText.textContent =
       "Dino load error";
@@ -280,19 +280,17 @@ loader.load(
 anchor.onTargetFound =
   () => {
 
-    targetVisible =
-      true;
-
-
-    dinoRoot.visible =
-      true;
-
-
-    dinoRoot.rotation.set(
-      0,
-      0,
-      0
+    console.log(
+      "DINOCAP FOUND"
     );
+
+
+    if (dinoModel) {
+
+      dinoRoot.visible =
+        true;
+
+    }
 
 
     statusText.textContent =
@@ -308,8 +306,9 @@ anchor.onTargetFound =
 anchor.onTargetLost =
   () => {
 
-    targetVisible =
-      false;
+    console.log(
+      "DINOCAP LOST"
+    );
 
 
     dinoRoot.visible =
@@ -323,19 +322,7 @@ anchor.onTargetLost =
 
 
 // ========================================
-// TEMP VECTOR
-// ========================================
-
-const cameraPosition =
-  new THREE.Vector3();
-
-
-const targetPosition =
-  new THREE.Vector3();
-
-
-// ========================================
-// START
+// START AR
 // ========================================
 
 async function start() {
@@ -355,17 +342,6 @@ async function start() {
 
     renderer.setAnimationLoop(
       () => {
-
-        if (
-          targetVisible &&
-          dinoModel
-        ) {
-
-          // ตอนนี้ยังไม่ทำ animation
-          // เอาไว้เช็ก orientation อย่างเดียว
-
-        }
-
 
         renderer.render(
           scene,
