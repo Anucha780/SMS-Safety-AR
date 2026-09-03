@@ -401,7 +401,7 @@ async function start() {
     statusText.textContent =
       "AR ERROR";
 
-  
+  }
 
 }
 
