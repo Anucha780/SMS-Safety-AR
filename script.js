@@ -6,7 +6,7 @@ import {
 
 
 const container =
-  document.getElementById("ar-container");
+  document.getElementById("container");
 
 const statusText =
   document.getElementById("status");
@@ -47,17 +47,27 @@ const geometry =
     0.3
   );
 
+
 const material =
   new THREE.MeshBasicMaterial({
+
     color: 0x00ff00,
+
     side: THREE.DoubleSide
+
   });
+
 
 const plane =
   new THREE.Mesh(
     geometry,
     material
   );
+
+
+plane.position.z =
+  0.01;
+
 
 anchor.group.add(
   plane
@@ -113,6 +123,7 @@ async function start() {
   catch (error) {
 
     console.error(error);
+
 
     statusText.textContent =
       "AR START ERROR";
